@@ -1,0 +1,18 @@
+Package: osninterface
+Title: Query OpenSky Network State Vectors via DuckDB
+Version: 0.1.0
+Authors@R: person("Quentin", "Goens", role = c("aut", "cre"))
+Description: Lazily query OpenSky Network historical state vector data via DuckDB,
+    reading parquet files directly from the OSN S3 bucket. Provides functions
+    to fetch daily data and filter by geographic radius around airports using
+    DuckDB's spatial extension (Haversine distance).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+    duckdb (>= 1.0.0),
+    DBI,
+    dplyr,
+    dbplyr,
+    utils

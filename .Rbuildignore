@@ -1,0 +1,6 @@
+^\.git$
+^CLAUDE\.md$
+^reference$
+^example-data$
+^.*\.Rproj$
+^\.Rproj\.user$

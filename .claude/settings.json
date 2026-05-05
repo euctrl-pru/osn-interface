@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd.exe /c \"python -c \\\\\"import pyarrow.parquet as pq; schema = pq.read_schema\\('example-data/states_2026-04-08-00.parquet'\\); [print\\(f'  {n}: {schema.field\\(n\\).type}'\\) for n in schema.names]; meta = pq.read_metadata\\('example-data/states_2026-04-08-00.parquet'\\); print\\(f'Rows: {meta.num_rows}'\\)\\\\\"\")",
+      "Bash(cmd.exe /c \"pip install pyarrow 2>NUL && python -c \\\\\"import pyarrow.parquet as pq; print\\(pq.read_schema\\('example-data/states_2026-04-08-00.parquet'\\)\\)\\\\\"\")",
+      "Read(//c/Users/qgoens/dev/R/win-library/R-4.5.0/**)",
+      "Read(//c/Program Files/R/R-4.5.0/library/**)",
+      "Bash(powershell.exe -NoProfile -Command \"& 'C:\\\\Program Files\\\\R\\\\R-4.5.0\\\\bin\\\\Rscript.exe' -e \\\\\"library\\(duckdb, lib.loc='C:/Users/qgoens/dev/R/win-library/R-4.5.0'\\); cat\\('duckdb loaded\\\\n'\\)\\\\\"\")",
+      "Bash(powershell.exe -NoProfile -Command \"& 'C:\\\\R-4.5.0\\\\bin\\\\Rscript.exe' _read_schema.R\")"
+    ]
+  }
+}
