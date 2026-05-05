@@ -14,7 +14,7 @@ osn_fetch_day <- function(date = Sys.Date() - 1, con = NULL) {
 
   date_str <- format(as.Date(date), "%Y-%m-%d")
   s3_glob  <- sprintf(
-    "s3://ec-datadump/%s/states_%s-*.parquet",
+    "s3://ec-datadump/%s/*/states_%s-*.parquet",
     date_str, date_str
   )
 
@@ -45,7 +45,7 @@ osn_fetch_days <- function(from, to, con = NULL) {
   dates <- seq(from, to, by = "day")
 
   globs <- sprintf(
-    "'s3://ec-datadump/%s/states_%s-*.parquet'",
+    "'s3://ec-datadump/%s/*/states_%s-*.parquet'",
     format(dates, "%Y-%m-%d"), format(dates, "%Y-%m-%d")
   )
   glob_list <- paste(globs, collapse = ", ")

@@ -18,7 +18,7 @@ OpenSky also exposes a Trino endpoint (`trino.opensky-network.org`), but direct 
 ### Data Source
 - **S3 Endpoint:** `s3.opensky-network.org`
 - **Bucket:** `ec-datadump`
-- **File pattern:** `s3://ec-datadump/YYYY-MM-DD/states_YYYY-MM-DD-HH.parquet` (24 hourly files per day)
+- **File pattern:** `s3://ec-datadump/YYYY-MM-DD/HH/states_YYYY-MM-DD-HH.parquet` (24 hourly files per day, each in its own hour subdirectory)
 - **Credentials:** Environment variables `OSN_USERNAME` (access key ID) and `OSN_KEY` (secret access key)
 
 ### Parquet Schema (state vectors)
