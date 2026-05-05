@@ -16,7 +16,7 @@ DuckDB's `httpfs` extension connects directly to the OpenSky S3-compatible stora
 ```r
 # Install from GitHub
 # install.packages("remotes")
-remotes::install_github("your-org/osn-interface")
+remotes::install_github("euctrl-pru/osn-interface")
 ```
 
 Or install from a local clone:
@@ -44,19 +44,40 @@ On first use, `osn_connect()` installs two DuckDB extensions (cached locally aft
 
 ## Configuration
 
-Set the following environment variables with your OpenSky S3 credentials:
+Set the following environment variables with your OpenSky S3 credentials.
+
+### macOS
+
+Add to `~/.zshrc` (or `~/.bash_profile` if using bash):
 
 ```bash
 export OSN_USERNAME="your_opensky_username"
 export OSN_KEY="your_opensky_secret_key"
 ```
 
-Or in R (e.g. in your `.Renviron` file):
+Then reload your shell: `source ~/.zshrc`
+
+### Windows
+
+Via PowerShell (persistent, user-level):
+
+```powershell
+[Environment]::SetEnvironmentVariable("OSN_USERNAME", "your_opensky_username", "User")
+[Environment]::SetEnvironmentVariable("OSN_KEY", "your_opensky_secret_key", "User")
+```
+
+Or via Settings > System > About > Advanced system settings > Environment Variables.
+
+### R `.Renviron` (cross-platform)
+
+Add to your `~/.Renviron` file (create it if it doesn't exist):
 
 ```
 OSN_USERNAME=your_opensky_username
 OSN_KEY=your_opensky_secret_key
 ```
+
+Restart R for the changes to take effect. You can find the file location with `Sys.getenv("R_USER")`.
 
 ## Quick start
 
