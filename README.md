@@ -1,6 +1,6 @@
 # osninterface
 
-R package for lazily querying [OpenSky Network](https://opensky-network.org/) historical state vector data via DuckDB. Reads parquet files directly from the OSN S3 bucket — no bulk downloads needed.
+A EUROCONTROL R package (for internal use) for lazily querying [OpenSky Network](https://opensky-network.org/) historical state vector data via DuckDB. Reads parquet files directly from the OSN S3 bucket — no bulk downloads needed.
 
 ## How it works
 
