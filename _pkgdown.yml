@@ -1,0 +1,21 @@
+url: https://euctrl-pru.github.io/osn-interface/
+
+template:
+  bootstrap: 5
+
+reference:
+  - title: Connection
+    contents:
+      - osn_connect
+      - osn_disconnect
+  - title: Fetching data
+    contents:
+      - osn_fetch_day
+      - osn_fetch_days
+  - title: Spatial filtering
+    contents:
+      - osn_filter_radius
+  - title: Airport lookup
+    contents:
+      - osn_airport_coords
+      - osn_fetch_around_airport

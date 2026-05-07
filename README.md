@@ -88,23 +88,11 @@ library(dplyr)
 # Connect to OpenSky S3
 con <- osn_connect()
 
-# Fetch yesterday's state vectors (lazy — nothing downloaded yet)
-sv <- osn_fetch_day(con = con)
-
-# Fetch a specific date
-sv <- osn_fetch_day(date = "2026-04-08", con = con)
-
-# Filter to 40 NM around Schiphol
-sv_eham <- sv |> osn_filter_radius(lat = 52.3086, lon = 4.7639, radius_nm = 40)
-
 # Or use the airport lookup shorthand
 sv_eham <- osn_fetch_around_airport("EHAM", radius_nm = 40, con = con)
 
 # Only now does data actually transfer
 result <- sv_eham |> collect()
-
-# Fetch a date range
-sv_week <- osn_fetch_days(from = "2026-04-01", to = "2026-04-07", con = con)
 
 # Always disconnect when done
 osn_disconnect(con)
@@ -121,6 +109,23 @@ osn_disconnect(con)
 | `osn_filter_radius(.data, lat, lon, radius_nm)` | Filter to a radius (NM) around coordinates |
 | `osn_airport_coords(ident)` | Look up airport lat/lon by ICAO code |
 | `osn_fetch_around_airport(ident, radius_nm, date, con)` | Fetch + filter around a named airport |
+
+## Documentation
+
+Full documentation is hosted at <https://euctrl-pru.github.io/osn-interface/>.
+
+To build the documentation site locally:
+
+```r
+# Install pkgdown if needed
+install.packages("pkgdown")
+
+# Generate roxygen2 docs and build the site
+roxygen2::roxygenise()
+pkgdown::build_site()
+```
+
+The site is built and deployed automatically via GitHub Actions on push to `main`. To enable this, go to your repository Settings > Pages and set the source to **GitHub Actions**.
 
 ## Data schema
 

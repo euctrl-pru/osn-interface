@@ -9,10 +9,16 @@ Description: Lazily query OpenSky Network historical state vector data via DuckD
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
 Imports:
     duckdb (>= 1.0.0),
     DBI,
     dplyr,
     dbplyr,
     utils
+Suggests:
+    pkgdown,
+    roxygen2
+URL: https://euctrl-pru.github.io/osn-interface/,
+    https://github.com/euctrl-pru/osn-interface
+BugReports: https://github.com/euctrl-pru/osn-interface/issues
+Config/roxygen2/version: 8.0.0
