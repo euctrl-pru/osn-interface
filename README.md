@@ -86,7 +86,7 @@ library(osninterface)
 library(dplyr)
 
 # Connect to OpenSky S3
-con <- osn_connect()
+con <- osn_connect(proxy = TRUE) # proxy = TRUE on ECTL HP laptop / proxy = FALSE on ECTL Macbook
 
 # Or use the airport lookup shorthand
 sv_eham <- osn_fetch_around_airport("EHAM", radius_nm = 40, con = con)
