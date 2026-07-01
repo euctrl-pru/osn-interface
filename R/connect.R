@@ -10,10 +10,46 @@
 #'   `http://user:password@@host:port`). The proxy username is taken from the
 #'   Windows session username. Extensions are force-installed to a local
 #'   directory and additional extensions (`ui`, `h3`) are installed.
+#' @param extension_directory Optional. Path to directory containing DuckDB
+#'   extensions. If specified, DuckDB will use local extensions instead of
+#'   downloading them. Can also be set via `DUCKDB_EXTENSION_DIRECTORY`
+#'   environment variable. Useful in corporate environments with restricted
+#'   internet access. If not specified and the environment variable is not set,
+#'   DuckDB will download extensions as needed (current default behavior).
 #' @return A DBI connection object.
+#' @examples
+#' \dontrun{
+#' # Use local extensions (method 1: parameter)
+#' con <- osn_connect(extension_directory = "~/dev/duckdb_ext")
+#'
+#' # Use local extensions (method 2: environment variable)
+#' Sys.setenv(DUCKDB_EXTENSION_DIRECTORY = "~/dev/duckdb_ext")
+#' con <- osn_connect()
+#'
+#' # Default behavior (download if needed)
+#' con <- osn_connect()
+#' }
 #' @export
-osn_connect <- function(proxy = FALSE) {
+osn_connect <- function(proxy = FALSE, extension_directory = NULL) {
   con <- DBI::dbConnect(duckdb::duckdb())
+
+  # Determine extension directory from parameter or environment variable
+  ext_dir <- extension_directory
+  if (is.null(ext_dir)) {
+    env_ext_dir <- Sys.getenv("DUCKDB_EXTENSION_DIRECTORY", "")
+    if (nzchar(env_ext_dir)) {
+      ext_dir <- env_ext_dir
+    }
+  }
+
+  # Set extension directory if determined
+  if (!is.null(ext_dir) && nzchar(ext_dir)) {
+    if (!dir.exists(ext_dir)) {
+      warning(sprintf("Extension directory does not exist: %s", ext_dir))
+    } else {
+      DBI::dbExecute(con, sprintf("SET extension_directory = '%s';", ext_dir))
+    }
+  }
 
   if (proxy) {
     https_proxy <- Sys.getenv("HTTPS_PROXY")
@@ -55,8 +91,15 @@ osn_connect <- function(proxy = FALSE) {
     message("Installed DuckDB extensions:")
     print(extensions)
   } else {
-    DBI::dbExecute(con, "INSTALL httpfs; LOAD httpfs;")
-    DBI::dbExecute(con, "INSTALL spatial; LOAD spatial;")
+    # Try loading extensions first (works if already installed locally)
+    # Falls back to INSTALL if LOAD fails
+    tryCatch({
+      DBI::dbExecute(con, "LOAD httpfs;")
+      DBI::dbExecute(con, "LOAD spatial;")
+    }, error = function(e) {
+      DBI::dbExecute(con, "INSTALL httpfs; LOAD httpfs;")
+      DBI::dbExecute(con, "INSTALL spatial; LOAD spatial;")
+    })
   }
 
   if (proxy) {

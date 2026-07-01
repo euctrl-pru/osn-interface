@@ -42,6 +42,23 @@ On first use, `osn_connect()` installs two DuckDB extensions (cached locally aft
 - `httpfs` — S3/HTTP remote file access
 - `spatial` — `ST_Distance_Sphere` for Haversine distance
 
+#### Using local extensions (corporate environments)
+
+If you're behind a corporate firewall that blocks extension downloads, you can use local extensions:
+
+**Method 1: Environment variable** (recommended)
+```r
+Sys.setenv(DUCKDB_EXTENSION_DIRECTORY = "~/dev/duckdb_ext")
+con <- osn_connect()
+```
+
+**Method 2: Function parameter**
+```r
+con <- osn_connect(extension_directory = "~/dev/duckdb_ext")
+```
+
+This is particularly useful in restricted network environments where downloading extensions fails.
+
 ## Configuration
 
 Set the following environment variables with your OpenSky S3 credentials.
