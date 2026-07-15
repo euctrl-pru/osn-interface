@@ -1,0 +1,9 @@
+# Local credentials — never commit
+.env
+.Renviron
+
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata

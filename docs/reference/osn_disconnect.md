@@ -1,6 +1,8 @@
 # Disconnect from OpenSky Network
 
-Shuts down the DuckDB connection cleanly.
+Shuts down the DuckDB connection cleanly. If a companion Trino
+connection was opened for the `"osn-historical-trino"` source, it is
+closed too.
 
 ## Usage
 

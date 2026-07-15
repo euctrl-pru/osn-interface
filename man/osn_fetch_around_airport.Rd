@@ -4,7 +4,13 @@
 \alias{osn_fetch_around_airport}
 \title{Fetch state vectors around an airport}
 \usage{
-osn_fetch_around_airport(ident, radius_nm, date = Sys.Date() - 1, con = NULL)
+osn_fetch_around_airport(
+  ident,
+  radius_nm,
+  date = Sys.Date() - 1,
+  con = NULL,
+  downsample_s = 5
+)
 }
 \arguments{
 \item{ident}{ICAO airport code (e.g. \code{"EHAM"}).}
@@ -15,11 +21,18 @@ osn_fetch_around_airport(ident, radius_nm, date = Sys.Date() - 1, con = NULL)
 
 \item{con}{A DBI connection from \code{\link[=osn_connect]{osn_connect()}}. If \code{NULL}, a new
 connection is created automatically.}
+
+\item{downsample_s}{Optional integer. Keep only state vectors whose Unix
+\code{time} is a multiple of this many seconds (\code{time \%\% downsample_s == 0}).
+Default \code{5}. Set to \code{NULL}, \code{0}, or \code{1} to keep every row.}
 }
 \value{
 Filtered lazy \code{tbl_dbi}.
 }
 \description{
 Convenience wrapper that combines \code{\link[=osn_fetch_day]{osn_fetch_day()}},
-\code{\link[=osn_airport_coords]{osn_airport_coords()}}, and \code{\link[=osn_filter_radius]{osn_filter_radius()}}.
+\code{\link[=osn_airport_coords]{osn_airport_coords()}}, and \code{\link[=osn_filter_radius]{osn_filter_radius()}}. The airport bounding box
+is pushed into the fetch (server-side for the \code{"osn-historical-trino"}
+source, so only nearby rows are transferred), then refined with a precise
+Haversine radius filter.
 }

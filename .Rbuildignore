@@ -1,4 +1,7 @@
 ^\.git$
+^\.env$
+^\.env\.template$
+^\.gitignore$
 ^CLAUDE\.md$
 ^reference$
 ^example-data$

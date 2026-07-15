@@ -7,7 +7,9 @@ reference:
   - title: Connection
     contents:
       - osn_connect
+      - osn_source
       - osn_disconnect
+      - osn_load_env
   - title: Fetching data
     contents:
       - osn_fetch_day
@@ -19,3 +21,6 @@ reference:
     contents:
       - osn_airport_coords
       - osn_fetch_around_airport
+  - title: Historical Trino source
+    contents:
+      - osn_trino_connect

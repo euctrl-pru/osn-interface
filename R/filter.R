@@ -1,3 +1,16 @@
+# Bounding box (in degrees) that encloses a circle of `radius_nm` Nautical Miles
+# around (lat, lon). 1 NM = 1/60 degree of latitude; longitude is scaled by
+# cos(lat). Returns a list(lat_min, lat_max, lon_min, lon_max) suitable for both
+# the DuckDB pre-filter and Trino server-side pushdown.
+osn_bbox <- function(lat, lon, radius_nm) {
+  dlat <- radius_nm / 60
+  dlon <- radius_nm / (60 * cos(lat * pi / 180))
+  list(
+    lat_min = lat - dlat, lat_max = lat + dlat,
+    lon_min = lon - dlon, lon_max = lon + dlon
+  )
+}
+
 #' Filter state vectors to a radius around a point
 #'
 #' Applies a fast bounding-box pre-filter (pushed down to parquet row-group
@@ -14,15 +27,11 @@
 osn_filter_radius <- function(.data, lat, lon, radius_nm) {
   radius_m <- radius_nm * 1852
 
-  # Bounding box: 1 NM = 1/60 degree latitude
-
-  dlat <- radius_nm / 60
-  dlon <- radius_nm / (60 * cos(lat * pi / 180))
-
-  lat_min <- lat - dlat
-  lat_max <- lat + dlat
-  lon_min <- lon - dlon
-  lon_max <- lon + dlon
+  bb      <- osn_bbox(lat, lon, radius_nm)
+  lat_min <- bb$lat_min
+  lat_max <- bb$lat_max
+  lon_min <- bb$lon_min
+  lon_max <- bb$lon_max
 
   haversine_sql <- sprintf(
     "ST_Distance_Sphere(ST_Point(lon, lat), ST_Point(%f, %f)) <= %f",
