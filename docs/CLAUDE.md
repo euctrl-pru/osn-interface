@@ -91,6 +91,7 @@ remote parquet - Simpler dependency chain: just the `duckdb` R package
 ### DuckDB Extensions
 
 ``` r
+
 dbExecute(con, "INSTALL httpfs; LOAD httpfs;")   # S3 remote parquet access
 dbExecute(con, "INSTALL spatial; LOAD spatial;")  # ST_Distance_Sphere (Haversine)
 dbExecute(con, "SET s3_endpoint='s3.opensky-network.org';")

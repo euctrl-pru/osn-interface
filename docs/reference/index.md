@@ -4,8 +4,12 @@
 
 - [`osn_connect()`](https://euctrl-pru.github.io/osn-interface/reference/osn_connect.md)
   : Create a DuckDB connection configured for OpenSky Network S3
+- [`osn_source()`](https://euctrl-pru.github.io/osn-interface/reference/osn_source.md)
+  : Get the data source recorded on an OSN connection
 - [`osn_disconnect()`](https://euctrl-pru.github.io/osn-interface/reference/osn_disconnect.md)
   : Disconnect from OpenSky Network
+- [`osn_load_env()`](https://euctrl-pru.github.io/osn-interface/reference/osn_load_env.md)
+  : Load credentials from a local .env file
 
 ## Fetching data
 
@@ -25,3 +29,8 @@
   : Look up airport coordinates by ICAO identifier
 - [`osn_fetch_around_airport()`](https://euctrl-pru.github.io/osn-interface/reference/osn_fetch_around_airport.md)
   : Fetch state vectors around an airport
+
+## Historical Trino source
+
+- [`osn_trino_connect()`](https://euctrl-pru.github.io/osn-interface/reference/osn_trino_connect.md)
+  : Open a connection to the OpenSky Network Trino endpoint

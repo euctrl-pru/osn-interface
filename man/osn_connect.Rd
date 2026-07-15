@@ -4,13 +4,66 @@
 \alias{osn_connect}
 \title{Create a DuckDB connection configured for OpenSky Network S3}
 \usage{
-osn_connect()
+osn_connect(
+  proxy = FALSE,
+  extension_directory = NULL,
+  source = c("osn-ec-datadump", "osn-historical-trino")
+)
+}
+\arguments{
+\item{proxy}{Logical. If \code{TRUE}, configures DuckDB to route through a
+corporate HTTP proxy. Proxy URL and password are parsed from the
+\code{HTTPS_PROXY} environment variable (expected format:
+\verb{http://user:password@host:port}). The proxy username is taken from the
+Windows session username. Extensions are force-installed to a local
+directory and additional extensions (\code{ui}, \code{h3}) are installed.}
+
+\item{extension_directory}{Optional. Path to directory containing DuckDB
+extensions. If specified, DuckDB will use local extensions instead of
+downloading them. Can also be set via \code{DUCKDB_EXTENSION_DIRECTORY}
+environment variable. Useful in corporate environments with restricted
+internet access. If not specified and the environment variable is not set,
+DuckDB will download extensions as needed (current default behavior).}
+
+\item{source}{Data source to use for subsequent fetches. One of:
+\itemize{
+\item \code{"osn-ec-datadump"} (default) — read parquet directly from the OSN S3
+bucket (\code{s3.opensky-network.org}) using the \code{OSN_USERNAME} / \code{OSN_KEY}
+credentials. This is the original behaviour.
+\item \code{"osn-historical-trino"} — read the same underlying OSN data from the OSN
+historical Trino endpoint (\code{trino.opensky-network.org}), the backend used
+by the \href{https://github.com/open-aviation/pyopensky}{pyopensky} /
+\code{traffic} Python libraries, authenticated with the \code{OPENSKY_USERNAME} /
+\code{OPENSKY_PASSWORD} credentials. Requires the \code{RPresto} and \code{httr}
+packages. Both sources return lazy \code{dbplyr} tables; the fetch functions
+read this choice from the connection.
+The chosen source is stored on the connection (see \code{\link[=osn_source]{osn_source()}}) so the
+\verb{osn_fetch_*()} functions know which backend to use without an extra
+argument.
+}}
 }
 \value{
-A DBI connection object.
+A DBI connection object with the selected data \code{source} recorded as
+an attribute.
 }
 \description{
 Initialises a DuckDB connection, installs/loads the \code{httpfs} and \code{spatial}
 extensions, and configures S3 access to the OSN bucket using the
 \code{OSN_USERNAME} and \code{OSN_KEY} environment variables.
+}
+\examples{
+\dontrun{
+# Use local extensions (method 1: parameter)
+con <- osn_connect(extension_directory = "~/dev/duckdb_ext")
+
+# Use local extensions (method 2: environment variable)
+Sys.setenv(DUCKDB_EXTENSION_DIRECTORY = "~/dev/duckdb_ext")
+con <- osn_connect()
+
+# Default S3 (ec-datadump) source
+con <- osn_connect()
+
+# Secondary historical Trino source
+con <- osn_connect(source = "osn-historical-trino")
+}
 }

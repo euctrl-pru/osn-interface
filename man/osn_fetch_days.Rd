@@ -4,7 +4,7 @@
 \alias{osn_fetch_days}
 \title{Lazily fetch state vectors for a date range}
 \usage{
-osn_fetch_days(from, to, con = NULL)
+osn_fetch_days(from, to, con = NULL, downsample_s = 5, bbox = NULL)
 }
 \arguments{
 \item{from}{Start date (inclusive).}
@@ -13,6 +13,13 @@ osn_fetch_days(from, to, con = NULL)
 
 \item{con}{A DBI connection from \code{\link[=osn_connect]{osn_connect()}}. If \code{NULL}, a new
 connection is created automatically.}
+
+\item{downsample_s}{Optional integer. Keep only state vectors whose Unix
+\code{time} is a multiple of this many seconds (\code{time \%\% downsample_s == 0}).
+Default \code{5}. Set to \code{NULL}, \code{0}, or \code{1} to keep every row.}
+
+\item{bbox}{Optional bounding box (see \code{\link[=osn_fetch_day]{osn_fetch_day()}}) pushed into the
+Trino query for the \code{"osn-historical-trino"} source.}
 }
 \value{
 A lazy \code{tbl_dbi} (dbplyr table).

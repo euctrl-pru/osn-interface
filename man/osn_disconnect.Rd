@@ -10,5 +10,6 @@ osn_disconnect(con)
 \item{con}{A DBI connection returned by \code{\link[=osn_connect]{osn_connect()}}.}
 }
 \description{
-Shuts down the DuckDB connection cleanly.
+Shuts down the DuckDB connection cleanly. If a companion Trino connection was
+opened for the \code{"osn-historical-trino"} source, it is closed too.
 }

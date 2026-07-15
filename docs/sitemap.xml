@@ -1,9 +1,10 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://euctrl-pru.github.io/osn-interface/404.html</loc></url>
-<url><loc>https://euctrl-pru.github.io/osn-interface/authors.html</loc></url>
 <url><loc>https://euctrl-pru.github.io/osn-interface/CLAUDE.html</loc></url>
-<url><loc>https://euctrl-pru.github.io/osn-interface/index.html</loc></url>
 <url><loc>https://euctrl-pru.github.io/osn-interface/LICENSE-text.html</loc></url>
+<url><loc>https://euctrl-pru.github.io/osn-interface/authors.html</loc></url>
+<url><loc>https://euctrl-pru.github.io/osn-interface/index.html</loc></url>
+<url><loc>https://euctrl-pru.github.io/osn-interface/news/index.html</loc></url>
 <url><loc>https://euctrl-pru.github.io/osn-interface/reference/index.html</loc></url>
 <url><loc>https://euctrl-pru.github.io/osn-interface/reference/osn_airport_coords.html</loc></url>
 <url><loc>https://euctrl-pru.github.io/osn-interface/reference/osn_connect.html</loc></url>
@@ -12,5 +13,8 @@
 <url><loc>https://euctrl-pru.github.io/osn-interface/reference/osn_fetch_day.html</loc></url>
 <url><loc>https://euctrl-pru.github.io/osn-interface/reference/osn_fetch_days.html</loc></url>
 <url><loc>https://euctrl-pru.github.io/osn-interface/reference/osn_filter_radius.html</loc></url>
+<url><loc>https://euctrl-pru.github.io/osn-interface/reference/osn_load_env.html</loc></url>
+<url><loc>https://euctrl-pru.github.io/osn-interface/reference/osn_source.html</loc></url>
+<url><loc>https://euctrl-pru.github.io/osn-interface/reference/osn_trino_connect.html</loc></url>
 </urlset>
 

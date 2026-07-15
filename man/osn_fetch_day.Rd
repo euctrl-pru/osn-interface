@@ -4,19 +4,42 @@
 \alias{osn_fetch_day}
 \title{Lazily fetch state vectors for a single day}
 \usage{
-osn_fetch_day(date = Sys.Date() - 1, con = NULL)
+osn_fetch_day(date = Sys.Date() - 1, con = NULL, downsample_s = 5, bbox = NULL)
 }
 \arguments{
 \item{date}{Date to fetch. Default: yesterday (\code{Sys.Date() - 1}).}
 
 \item{con}{A DBI connection from \code{\link[=osn_connect]{osn_connect()}}. If \code{NULL}, a new
 connection is created automatically.}
+
+\item{downsample_s}{Optional integer. Keep only state vectors whose Unix
+\code{time} is a multiple of this many seconds (\code{time \%\% downsample_s == 0}),
+reducing the update rate. Default \code{5} (5-second updates), matching
+pyopensky's behaviour. Set to \code{NULL}, \code{0}, or \code{1} to keep every row.}
+
+\item{bbox}{Optional bounding box (list with \code{lat_min}, \code{lat_max}, \code{lon_min},
+\code{lon_max}) to pre-filter server-side. For the \code{"osn-historical-trino"}
+source this is pushed into the Trino query so only rows inside the box are
+transferred — important for performance, as an unfiltered day is very
+large. Ignored by the \code{"osn-ec-datadump"} source (which prunes via the
+later \code{\link[=osn_filter_radius]{osn_filter_radius()}} parquet pushdown). Usually set indirectly via
+\code{\link[=osn_fetch_around_airport]{osn_fetch_around_airport()}}.}
 }
 \value{
 A lazy \code{tbl_dbi} (dbplyr table).
 }
 \description{
-Creates a DuckDB view over the remote parquet files for the given date and
-returns a lazy \code{dbplyr} table. No data is downloaded until you call
-\code{\link[dplyr:collect]{dplyr::collect()}}, \code{\link[=head]{head()}}, or similar.
+Returns a lazy \code{dbplyr} table of one day's state vectors. No data is
+transferred until you call \code{\link[dplyr:compute]{dplyr::collect()}}, \code{\link[=head]{head()}}, or similar. The
+source recorded on \code{con} (see \code{\link[=osn_connect]{osn_connect()}}) selects the backend:
+}
+\details{
+\itemize{
+\item \code{"osn-ec-datadump"} — a DuckDB view over the remote parquet files in the
+OSN S3 bucket.
+\item \code{"osn-historical-trino"} — the day is queried from the OSN Trino endpoint
+and registered into DuckDB as a lazy table.
+}
+
+Either way the returned object is a lazy \code{tbl_dbi} with identical schema.
 }

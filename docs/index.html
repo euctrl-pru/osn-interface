@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">osninterface</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -48,11 +49,55 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="osninterface">osninterface<a class="anchor" aria-label="anchor" href="#osninterface"></a>
 </h1></div>
-<p>R package for lazily querying <a href="https://opensky-network.org/" class="external-link">OpenSky Network</a> historical state vector data via DuckDB. Reads parquet files directly from the OSN S3 bucket — no bulk downloads needed.</p>
+<p>A EUROCONTROL R package (for internal use) for lazily querying <a href="https://opensky-network.org/" class="external-link">OpenSky Network</a> historical state vector data via DuckDB. Reads parquet files directly from the OSN S3 bucket — no bulk downloads needed.</p>
 <div class="section level2">
 <h2 id="how-it-works">How it works<a class="anchor" aria-label="anchor" href="#how-it-works"></a>
 </h2>
 <p>DuckDB’s <code>httpfs</code> extension connects directly to the OpenSky S3-compatible storage (<code>s3.opensky-network.org</code>) and reads parquet files on demand. Queries are lazy: no data is transferred until you call <code><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect()</a></code>. The <code>spatial</code> extension provides native Haversine distance (<code>ST_Distance_Sphere</code>) for geographic filtering.</p>
+</div>
+<div class="section level2">
+<h2 id="data-sources">Data sources<a class="anchor" aria-label="anchor" href="#data-sources"></a>
+</h2>
+<p>The package can read the same OpenSky state-vector data through two interchangeable sources, selected on the connection with <code>osn_connect(source = ...)</code>:</p>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr>
+<th><code>source</code></th>
+<th>Endpoint</th>
+<th>Credentials</th>
+<th>Extra deps</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+<code>"osn-ec-datadump"</code> (default)</td>
+<td>OSN S3 bucket (<code>s3.opensky-network.org</code>)</td>
+<td>
+<code>OSN_USERNAME</code>, <code>OSN_KEY</code>
+</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>"osn-historical-trino"</code></td>
+<td>OSN historical Trino endpoint (<code>trino.opensky-network.org</code>, catalog <code>minio</code>, schema <code>osky</code>) — the backend used by <a href="https://github.com/open-aviation/pyopensky" class="external-link">pyopensky</a> / <code>traffic</code>
+</td>
+<td>OAuth2 browser login (<code>OPENSKY_USERNAME</code> used as the Trino user tag)</td>
+<td>
+<code>RPresto</code>, <code>httr</code>, <code>jsonlite</code>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Both sources return <strong>lazy <code>dbplyr</code> tables</strong> with identical schema and API — the fetch functions read the chosen source from the connection, so downstream code (<code><a href="reference/osn_filter_radius.html">osn_filter_radius()</a></code>, <code><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect()</a></code>, …) is the same either way. The default remains <code>"osn-ec-datadump"</code>, so existing code is unaffected.</p>
+<p>The <code>"osn-historical-trino"</code> source queries Trino via the native R Trino client <code>RPresto</code>, pulls the result into R, and registers it into DuckDB as a lazy table. Install its dependencies with <code>install.packages(c("RPresto", "httr", "jsonlite"))</code>.</p>
+<p><strong>Authentication:</strong> OpenSky’s Trino endpoint uses OAuth2 <em>external</em> (browser) authentication — the same flow as <code>trino --external-authentication</code>. The first time you connect in a session, a browser window opens for you to log in with your OpenSky account; the resulting bearer token is cached on disk (<code>tools::R_user_dir("osninterface", "cache")</code>) and reused until it expires, so subsequent connections are non-interactive. Basic username/password auth is <strong>not</strong> accepted by the OSN Trino server.</p>
+<p><strong>Performance:</strong> an unfiltered day of state vectors is very large, so always constrain your query. <code><a href="reference/osn_fetch_around_airport.html">osn_fetch_around_airport()</a></code> pushes the airport bounding box into the Trino <code>WHERE</code> clause automatically (partition column <code>hour</code> plus <code>lat</code>/<code>lon</code>), keeping fetches fast (e.g. EHAM 10 NM for one day ≈ 30 s). The <code>time %% 5</code> downsample is likewise applied server-side.</p>
+<p>By default the fetch functions <strong>downsample to one state vector every 5 seconds</strong> (<code>time %% 5 == 0</code>), matching pyopensky. Override with the <code>downsample_s</code> argument (e.g. <code>downsample_s = 1</code> or <code>NULL</code> to keep every row).</p>
 </div>
 <div class="section level2">
 <h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
@@ -97,6 +142,82 @@
 <li>
 <code>spatial</code> — <code>ST_Distance_Sphere</code> for Haversine distance</li>
 </ul>
+<div class="section level4">
+<h4 id="using-local-extensions-corporate-environments">Using local extensions (corporate environments)<a class="anchor" aria-label="anchor" href="#using-local-extensions-corporate-environments"></a>
+</h4>
+<p>If you’re behind a corporate firewall that blocks extension downloads, you can use local extensions:</p>
+<p><strong>Method 1: Environment variable</strong> (recommended)</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>DUCKDB_EXTENSION_DIRECTORY <span class="op">=</span> <span class="st">"~/dev/duckdb_ext"</span><span class="op">)</span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><strong>Method 2: Function parameter</strong></p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span>extension_directory <span class="op">=</span> <span class="st">"~/dev/duckdb_ext"</span><span class="op">)</span></span></code></pre></div>
+<p>This is particularly useful in restricted network environments where downloading extensions fails.</p>
+</div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="getting-started-first-use">Getting started (first use)<a class="anchor" aria-label="anchor" href="#getting-started-first-use"></a>
+</h2>
+<p>A step-by-step walkthrough for setting up the package from scratch.</p>
+<div class="section level3">
+<h3 id="id_1-get-opensky-credentials">1. Get OpenSky credentials<a class="anchor" aria-label="anchor" href="#id_1-get-opensky-credentials"></a>
+</h3>
+<p>You need an <a href="https://opensky-network.org/" class="external-link">OpenSky Network</a> account with historical-data access (request it at <a href="https://opensky-network.org/my-opensky/request-data" class="external-link uri">https://opensky-network.org/my-opensky/request-data</a>). Depending on which source you use:</p>
+<ul>
+<li>
+<strong><code>osn-ec-datadump</code> (default, S3):</strong> an <strong>S3 access key ID + secret key</strong> pair. These look like <code>k4d8f2...</code> (≈16 chars) and a longer secret (≈32 chars). They go in <code>OSN_USERNAME</code> and <code>OSN_KEY</code>.</li>
+<li>
+<strong><code>osn-historical-trino</code> (Trino):</strong> your OpenSky <strong>account username</strong>, used only as a tag in <code>OPENSKY_USERNAME</code>. You do <strong>not</strong> put a password here — the Trino source logs in through your browser (OAuth2). See <a href="#data-sources">Data sources</a>.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="id_2-install-the-package-and-optionally-the-trino-dependencies">2. Install the package and (optionally) the Trino dependencies<a class="anchor" aria-label="anchor" href="#id_2-install-the-package-and-optionally-the-trino-dependencies"></a>
+</h3>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"euctrl-pru/osn-interface"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Only needed if you will use source = "osn-historical-trino":</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"RPresto"</span>, <span class="st">"httr"</span>, <span class="st">"jsonlite"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="id_3-create-a-env-file-with-your-credentials">3. Create a <code>.env</code> file with your credentials<a class="anchor" aria-label="anchor" href="#id_3-create-a-env-file-with-your-credentials"></a>
+</h3>
+<p>From the project root (or any working directory), copy the template and fill it in:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">cp</span> .env.template .env</span></code></pre></div>
+<p>Then edit <code>.env</code> so it looks like this (fill in your own values):</p>
+<pre class="dotenv"><code># --- osn-ec-datadump source (default) ---
+OSN_USERNAME=your_s3_access_key_id
+OSN_KEY=your_s3_secret_access_key
+
+# --- osn-historical-trino source ---
+OPENSKY_USERNAME=your_opensky_login   # tag only; auth is via browser
+OPENSKY_PASSWORD=                      # leave blank — not used by Trino OAuth2</code></pre>
+<p><code>.env</code> is git-ignored and must never be committed. You only need to fill in the credentials for the source(s) you intend to use.</p>
+</div>
+<div class="section level3">
+<h3 id="id_4-fetch-some-data">4. Fetch some data<a class="anchor" aria-label="anchor" href="#id_4-fetch-some-data"></a>
+</h3>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://euctrl-pru.github.io/osn-interface/">osninterface</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/osn_load_env.html">osn_load_env</a></span><span class="op">(</span><span class="op">)</span>            <span class="co"># load credentials from ./.env</span></span>
+<span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span>      <span class="co"># default source = "osn-ec-datadump"</span></span>
+<span></span>
+<span><span class="co"># One day of traffic within 40 NM of Amsterdam Schiphol (D-1 by default)</span></span>
+<span><span class="va">sv</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_fetch_around_airport.html">osn_fetch_around_airport</a></span><span class="op">(</span><span class="st">"EHAM"</span>, radius_nm <span class="op">=</span> <span class="fl">40</span>, con <span class="op">=</span> <span class="va">con</span><span class="op">)</span></span>
+<span><span class="va">df</span>  <span class="op">&lt;-</span> <span class="va">sv</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span>    <span class="co"># data transfers only now (lazy until collect)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">df</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/osn_disconnect.html">osn_disconnect</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span></code></pre></div>
+<p>To use the Trino source instead, connect with <code>osn_connect(source = "osn-historical-trino")</code>; a browser window opens on first use for you to log in (the token is then cached — see <a href="#data-sources">Authentication</a>).</p>
+<blockquote>
+<p><strong>Tip:</strong> if you prefer not to use a <code>.env</code> file, set the same variables via <code>~/.Renviron</code> or your shell — see <a href="#configuration">Configuration</a> below.</p>
+</blockquote>
 </div>
 </div>
 <div class="section level2">
@@ -107,16 +228,16 @@
 <h3 id="macos">macOS<a class="anchor" aria-label="anchor" href="#macos"></a>
 </h3>
 <p>Add to <code>~/.zshrc</code> (or <code>~/.bash_profile</code> if using bash):</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="bu">export</span> <span class="va">OSN_USERNAME</span><span class="op">=</span><span class="st">"your_opensky_username"</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="bu">export</span> <span class="va">OSN_KEY</span><span class="op">=</span><span class="st">"your_opensky_secret_key"</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="bu">export</span> <span class="va">OSN_USERNAME</span><span class="op">=</span><span class="st">"your_opensky_username"</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="bu">export</span> <span class="va">OSN_KEY</span><span class="op">=</span><span class="st">"your_opensky_secret_key"</span></span></code></pre></div>
 <p>Then reload your shell: <code>source ~/.zshrc</code></p>
 </div>
 <div class="section level3">
 <h3 id="windows">Windows<a class="anchor" aria-label="anchor" href="#windows"></a>
 </h3>
 <p>Via PowerShell (persistent, user-level):</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="op">[</span>Environment<span class="op">]::</span>SetEnvironmentVariable<span class="op">(</span><span class="st">"OSN_USERNAME"</span><span class="op">,</span> <span class="st">"your_opensky_username"</span><span class="op">,</span> <span class="st">"User"</span><span class="op">)</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="op">[</span>Environment<span class="op">]::</span>SetEnvironmentVariable<span class="op">(</span><span class="st">"OSN_KEY"</span><span class="op">,</span> <span class="st">"your_opensky_secret_key"</span><span class="op">,</span> <span class="st">"User"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode powershell"><code class="sourceCode powershell"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="op">[</span>Environment<span class="op">]::</span>SetEnvironmentVariable<span class="op">(</span><span class="st">"OSN_USERNAME"</span><span class="op">,</span> <span class="st">"your_opensky_username"</span><span class="op">,</span> <span class="st">"User"</span><span class="op">)</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="op">[</span>Environment<span class="op">]::</span>SetEnvironmentVariable<span class="op">(</span><span class="st">"OSN_KEY"</span><span class="op">,</span> <span class="st">"your_opensky_secret_key"</span><span class="op">,</span> <span class="st">"User"</span><span class="op">)</span></span></code></pre></div>
 <p>Or via Settings &gt; System &gt; About &gt; Advanced system settings &gt; Environment Variables.</p>
 </div>
 <div class="section level3">
@@ -127,19 +248,39 @@
 <span><span class="va">OSN_KEY</span><span class="op">=</span><span class="va">your_opensky_secret_key</span></span></code></pre>
 <p>Restart R for the changes to take effect. You can find the file location with <code>Sys.getenv("R_USER")</code>.</p>
 </div>
+<div class="section level3">
+<h3 id="project-env-file">Project <code>.env</code> file<a class="anchor" aria-label="anchor" href="#project-env-file"></a>
+</h3>
+<p>For local development you can keep credentials in a project-level <code>.env</code> file instead of your global environment. Copy the provided template and fill in your values:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">cp</span> .env.template .env</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co"># then edit .env</span></span></code></pre></div>
+<p><code>.env</code> is git-ignored and must never be committed. Load it into an R session with:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/osn_load_env.html">osn_load_env</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># reads ./.env (wrapper around readRenviron())</span></span></code></pre></div>
+<p>The template covers both sources: <code>OSN_USERNAME</code> / <code>OSN_KEY</code> for <code>"osn-ec-datadump"</code> and <code>OPENSKY_USERNAME</code> / <code>OPENSKY_PASSWORD</code> for <code>"osn-historical-trino"</code>.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://euctrl-pru.github.io/osn-interface/">osninterface</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Connect to OpenSky S3</span></span>
-<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># (optional) load credentials from a project .env file</span></span>
+<span><span class="fu"><a href="reference/osn_load_env.html">osn_load_env</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Or use the airport lookup shorthand</span></span>
+<span><span class="co"># Connect to the default S3 (ec-datadump) source</span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span>proxy <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="co"># proxy = TRUE on ECTL HP laptop / proxy = FALSE on ECTL Macbook</span></span>
+<span></span>
+<span><span class="co"># ...or use the historical Trino source instead</span></span>
+<span><span class="co"># con &lt;- osn_connect(source = "osn-historical-trino")</span></span>
+<span></span>
+<span><span class="co"># Airport lookup shorthand (defaults to 5-second updates)</span></span>
 <span><span class="va">sv_eham</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_fetch_around_airport.html">osn_fetch_around_airport</a></span><span class="op">(</span><span class="st">"EHAM"</span>, radius_nm <span class="op">=</span> <span class="fl">40</span>, con <span class="op">=</span> <span class="va">con</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Keep every state vector instead of downsampling</span></span>
+<span><span class="va">sv_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_fetch_around_airport.html">osn_fetch_around_airport</a></span><span class="op">(</span><span class="st">"EHAM"</span>, radius_nm <span class="op">=</span> <span class="fl">40</span>, con <span class="op">=</span> <span class="va">con</span>, downsample_s <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Only now does data actually transfer</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">sv_eham</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -161,19 +302,31 @@
 </tr></thead>
 <tbody>
 <tr>
-<td><code><a href="reference/osn_connect.html">osn_connect()</a></code></td>
-<td>Create a DuckDB connection configured for OSN S3</td>
+<td><code>osn_connect(source = ...)</code></td>
+<td>Create a connection for the <code>"osn-ec-datadump"</code> (default) or <code>"osn-historical-trino"</code> source</td>
+</tr>
+<tr>
+<td><code>osn_source(con)</code></td>
+<td>Report the source recorded on a connection</td>
+</tr>
+<tr>
+<td><code><a href="reference/osn_trino_connect.html">osn_trino_connect()</a></code></td>
+<td>Open a raw Trino (<code>RPresto</code>) connection to the OSN historical endpoint</td>
+</tr>
+<tr>
+<td><code>osn_load_env(path = ".env")</code></td>
+<td>Load credentials from a local <code>.env</code> file</td>
 </tr>
 <tr>
 <td><code>osn_disconnect(con)</code></td>
 <td>Shut down the connection</td>
 </tr>
 <tr>
-<td><code>osn_fetch_day(date, con)</code></td>
+<td><code>osn_fetch_day(date, con, downsample_s = 5)</code></td>
 <td>Lazy table for one day’s state vectors (default: D-1)</td>
 </tr>
 <tr>
-<td><code>osn_fetch_days(from, to, con)</code></td>
+<td><code>osn_fetch_days(from, to, con, downsample_s = 5)</code></td>
 <td>Lazy table spanning a date range</td>
 </tr>
 <tr>
@@ -185,18 +338,127 @@
 <td>Look up airport lat/lon by ICAO code</td>
 </tr>
 <tr>
-<td><code>osn_fetch_around_airport(ident, radius_nm, date, con)</code></td>
+<td><code>osn_fetch_around_airport(ident, radius_nm, date, con, downsample_s = 5)</code></td>
 <td>Fetch + filter around a named airport</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level2">
+<h2 id="function-reference-with-examples">Function reference with examples<a class="anchor" aria-label="anchor" href="#function-reference-with-examples"></a>
+</h2>
+<p>Minimal example for each exported function. All examples assume you have run <code><a href="https://euctrl-pru.github.io/osn-interface/">library(osninterface)</a></code>, <code><a href="https://dplyr.tidyverse.org" class="external-link">library(dplyr)</a></code>, and <code><a href="reference/osn_load_env.html">osn_load_env()</a></code> first.</p>
+<div class="section level3">
+<h3 id="osn_load_env">
+<code>osn_load_env()</code><a class="anchor" aria-label="anchor" href="#osn_load_env"></a>
+</h3>
+<p>Load credentials from a local <code>.env</code> file into the R session.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/osn_load_env.html">osn_load_env</a></span><span class="op">(</span><span class="op">)</span>             <span class="co"># reads ./.env</span></span>
+<span><span class="fu"><a href="reference/osn_load_env.html">osn_load_env</a></span><span class="op">(</span><span class="st">"~/secrets/osn.env"</span><span class="op">)</span>  <span class="co"># or a specific path</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="osn_connect">
+<code>osn_connect()</code><a class="anchor" aria-label="anchor" href="#osn_connect"></a>
+</h3>
+<p>Open a connection and choose the data source. The source is remembered on the connection.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span>                                  <span class="co"># default: osn-ec-datadump (S3)</span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span>source <span class="op">=</span> <span class="st">"osn-historical-trino"</span><span class="op">)</span>   <span class="co"># Trino (opens browser on first use)</span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span>proxy <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>                       <span class="co"># behind a corporate proxy</span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span>extension_directory <span class="op">=</span> <span class="st">"~/dev/duckdb_ext"</span><span class="op">)</span>  <span class="co"># offline DuckDB extensions</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="osn_source">
+<code>osn_source()</code><a class="anchor" aria-label="anchor" href="#osn_source"></a>
+</h3>
+<p>Report which source a connection uses.</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/osn_source.html">osn_source</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span>            <span class="co"># "osn-ec-datadump"</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="osn_fetch_day">
+<code>osn_fetch_day()</code><a class="anchor" aria-label="anchor" href="#osn_fetch_day"></a>
+</h3>
+<p>Lazy table for a single day (default: yesterday, D-1).</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">sv</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_fetch_day.html">osn_fetch_day</a></span><span class="op">(</span>date <span class="op">=</span> <span class="st">"2024-06-01"</span>, con <span class="op">=</span> <span class="va">con</span><span class="op">)</span></span>
+<span><span class="va">sv</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="op">!</span><span class="va">onGround</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># keep every state vector (no 5-second downsample)</span></span>
+<span><span class="va">sv_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_fetch_day.html">osn_fetch_day</a></span><span class="op">(</span><span class="st">"2024-06-01"</span>, con <span class="op">=</span> <span class="va">con</span>, downsample_s <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="osn_fetch_days">
+<code>osn_fetch_days()</code><a class="anchor" aria-label="anchor" href="#osn_fetch_days"></a>
+</h3>
+<p>Lazy table spanning an inclusive date range.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">sv</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_fetch_days.html">osn_fetch_days</a></span><span class="op">(</span>from <span class="op">=</span> <span class="st">"2024-06-01"</span>, to <span class="op">=</span> <span class="st">"2024-06-03"</span>, con <span class="op">=</span> <span class="va">con</span><span class="op">)</span></span>
+<span><span class="va">sv</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/context.html" class="external-link">n</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="osn_airport_coords">
+<code>osn_airport_coords()</code><a class="anchor" aria-label="anchor" href="#osn_airport_coords"></a>
+</h3>
+<p>Look up an airport’s coordinates by ICAO code.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/osn_airport_coords.html">osn_airport_coords</a></span><span class="op">(</span><span class="st">"EHAM"</span><span class="op">)</span>   <span class="co"># list(lat = 52.31, lon = 4.76)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="osn_filter_radius">
+<code>osn_filter_radius()</code><a class="anchor" aria-label="anchor" href="#osn_filter_radius"></a>
+</h3>
+<p>Filter any lazy table to a radius (in Nautical Miles) around a point. Combines a fast bounding-box pre-filter with a precise Haversine distance filter.</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">con</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">lhr</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_airport_coords.html">osn_airport_coords</a></span><span class="op">(</span><span class="st">"EGLL"</span><span class="op">)</span></span>
+<span><span class="va">near</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_fetch_day.html">osn_fetch_day</a></span><span class="op">(</span><span class="st">"2024-06-01"</span>, con <span class="op">=</span> <span class="va">con</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="reference/osn_filter_radius.html">osn_filter_radius</a></span><span class="op">(</span>lat <span class="op">=</span> <span class="va">lhr</span><span class="op">$</span><span class="va">lat</span>, lon <span class="op">=</span> <span class="va">lhr</span><span class="op">$</span><span class="va">lon</span>, radius_nm <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="va">near</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="osn_fetch_around_airport">
+<code>osn_fetch_around_airport()</code><a class="anchor" aria-label="anchor" href="#osn_fetch_around_airport"></a>
+</h3>
+<p>Convenience wrapper: fetch a day and filter to a radius around a named airport in one call. Pushes the bounding box into the query for speed.</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">sv</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_fetch_around_airport.html">osn_fetch_around_airport</a></span><span class="op">(</span><span class="st">"LFPG"</span>, radius_nm <span class="op">=</span> <span class="fl">25</span>,</span>
+<span>                                date <span class="op">=</span> <span class="st">"2024-06-01"</span>, con <span class="op">=</span> <span class="va">con</span><span class="op">)</span></span>
+<span><span class="va">sv</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="osn_trino_connect">
+<code>osn_trino_connect()</code><a class="anchor" aria-label="anchor" href="#osn_trino_connect"></a>
+</h3>
+<p>Open a <em>raw</em> Trino connection (a <code>RPresto</code>/DBI connection) — for running arbitrary SQL against the OSN Trino catalog. Most users do not need this; use <code>osn_connect(source = "osn-historical-trino")</code> instead. Opens a browser for OAuth2 login on first use.</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tcon</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_trino_connect.html">osn_trino_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbGetQuery.html" class="external-link">dbGetQuery</a></span><span class="op">(</span><span class="va">tcon</span>, <span class="st">"SELECT count(*) FROM minio.osky.state_vectors_data4</span></span>
+<span><span class="st">                       WHERE hour = 1717200000"</span><span class="op">)</span></span>
+<span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbDisconnect.html" class="external-link">dbDisconnect</a></span><span class="op">(</span><span class="va">tcon</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="osn_disconnect">
+<code>osn_disconnect()</code><a class="anchor" aria-label="anchor" href="#osn_disconnect"></a>
+</h3>
+<p>Close the connection (and its companion Trino connection, if any). Always call this when done.</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/osn_connect.html">osn_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># ... work ...</span></span>
+<span><span class="fu"><a href="reference/osn_disconnect.html">osn_disconnect</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
 </h2>
 <p>Full documentation is hosted at <a href="https://euctrl-pru.github.io/osn-interface/" class="uri">https://euctrl-pru.github.io/osn-interface/</a>.</p>
 <p>To build the documentation site locally:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Install pkgdown if needed</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pkgdown"</span><span class="op">)</span></span>
 <span></span>
